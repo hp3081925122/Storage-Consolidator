@@ -8,6 +8,7 @@
     "SophisticatedFilteredInventoryMixin",
     "SophisticatedInventoryMixin",
     "SidedInvWrapperMixin",
+    "TomStorageMultiInventoryAccessMixin",
     "TomStorageTerminalBlockEntityMixin",
     "TomStorageTerminalMenuMixin",
     "TomStorageBlockInventoryAccessMixin",
