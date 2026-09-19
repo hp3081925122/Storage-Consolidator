@@ -16,6 +16,7 @@ import net.neoforged.neoforge.transfer.ResourceHandler;
 import net.neoforged.neoforge.transfer.item.ItemResource;
 import net.neoforged.neoforge.transfer.transaction.Transaction;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.neoforged.neoforge.server.loading.ServerModLoader;
 import net.p3pp3rf1y.sophisticatedcore.api.IStorageWrapper;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 import net.p3pp3rf1y.sophisticatedcore.settings.memory.MemorySettingsCategory;
@@ -34,6 +35,8 @@ public final class SophisticatedCompatSelfTest {
 
     /** 注册空环境和真实兼容回归测试实例。 */
     public static void registerGameTest(RegisterGameTestsEvent event) {
+        // 自定义测试实例只在专用 GameTestServer 注册，避免普通客户端同步未注册的测试类型。
+        if (!ServerModLoader.isGameTestServer()) return;
         Holder<TestEnvironmentDefinition<?>> environment = event.registerEnvironment(
                 Identifier.fromNamespaceAndPath(Storage_consolidator.MODID, "compat"),
                 new TestEnvironmentDefinition.AllOf());
