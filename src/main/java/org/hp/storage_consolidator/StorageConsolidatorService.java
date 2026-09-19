@@ -92,7 +92,7 @@ public final class StorageConsolidatorService {
             return;
         }
         activeJob = new ConsolidationJob(player, terminal, level, networkAccess);
-        Storage_consolidator.LOGGER.info("Storage consolidation started: player={}, terminal={}, mode=continuous, limitMs=3000",
+        Storage_consolidator.LOGGER.info("Storage consolidation started: player={}, terminal={}, mode=continuous, yieldMs=3000",
                 player.getGameProfile().getName(), terminal.getBlockPos());
         player.displayClientMessage(Component.translatable("message.storage_consolidator.started"), true);
     }
@@ -159,12 +159,10 @@ public final class StorageConsolidatorService {
                 job.player.displayClientMessage(Component.translatable("message.storage_consolidator.completed", job.moved), true);
                 activeJob = null;
             }
-            // 三秒预算耗尽后终止本次任务，不在后续 tick 慢慢搬运。
+            // 三秒预算耗尽后只让出本次回调，保留任务状态并在后续 tick 继续搬运。
             if (!finished) {
-                Storage_consolidator.LOGGER.warn("Storage consolidation timed out: moved={}, slots={}, elapsedMs={}",
+                Storage_consolidator.LOGGER.info("Storage consolidation yielded after callback budget: moved={}, slots={}, elapsedMs={}, continuing=true",
                         job.moved, job.slotOrder, (processed - start) / 1_000_000.0);
-                job.player.displayClientMessage(Component.translatable("message.storage_consolidator.timeout", job.moved), true);
-                activeJob = null;
             }
             job.previousLoggingNanos = System.nanoTime() - processed;
         } catch (RuntimeException exception) {
@@ -187,7 +185,7 @@ public final class StorageConsolidatorService {
     }
 
     /**
-     * 连续执行至完成或三秒上限，单次容器调用不可中断。
+     * 每次回调最多连续执行三秒，预算耗尽后保留进度并交给后续回调继续执行。
      */
     private static final class TickBudget {
         private final long deadline;
