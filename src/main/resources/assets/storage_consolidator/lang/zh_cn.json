@@ -2,7 +2,7 @@
   "button.storage_consolidator.consolidate": "整理",
   "message.storage_consolidator.completed": "已整理 %s 个物品",
   "message.storage_consolidator.no_network": "当前终端没有可整理的库存网络",
-  "message.storage_consolidator.started": "正在整理；三秒内未完成也会继续，关闭界面不取消任务",
+  "message.storage_consolidator.started": "正在整理",
   "message.storage_consolidator.busy": "当前已有整理任务正在进行",
   "message.storage_consolidator.cancelled": "整理已取消：终端、距离或库存网络状态已改变",
   "message.storage_consolidator.stress.created": "压力测试场景已生成：实际写入 %s 个物品堆，共 %s 个容器（每类复制 %s 份）；终端位置：%s",
