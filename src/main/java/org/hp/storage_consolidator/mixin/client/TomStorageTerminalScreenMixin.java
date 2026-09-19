@@ -7,8 +7,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import org.hp.storage_consolidator.network.ConsolidateRequestPayload;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,7 +17,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * 在 Tom's Storage 终端左侧增加一键整理按钮。
  */
-@OnlyIn(Dist.CLIENT)
 @Mixin(value = AbstractStorageTerminalScreen.class, remap = false)
 public abstract class TomStorageTerminalScreenMixin extends Screen {
     @Shadow
