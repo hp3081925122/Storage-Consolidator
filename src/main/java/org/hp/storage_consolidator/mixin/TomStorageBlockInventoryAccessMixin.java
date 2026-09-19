@@ -4,7 +4,8 @@ import com.tom.storagemod.inventory.PlatformInventoryAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.neoforged.neoforge.capabilities.BlockCapabilityCache;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.hp.storage_consolidator.access.TomStorageBlockPositionAccess;
 import org.hp.storage_consolidator.Storage_consolidator;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,7 +24,7 @@ public abstract class TomStorageBlockInventoryAccessMixin implements TomStorageB
     private static long lastInvalidCacheLogTime = -20L;
 
     @Shadow
-    private BlockCapabilityCache<IItemHandler, Direction> itemCache;
+    private BlockCapabilityCache<ResourceHandler<ItemResource>, Direction> itemCache;
 
     /**
      * 返回能力缓存对应的方块位置。

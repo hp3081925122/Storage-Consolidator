@@ -1,11 +1,9 @@
 pluginManagement {
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         maven { url = 'https://maven.neoforged.net/releases' }
     }
 }
 
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
-}
+// 固定 26.1.2 NeoForge 工程名称，避免沿用旧版本模板名称。
+rootProject.name = 'storage-consolidator-2612-neoforge'

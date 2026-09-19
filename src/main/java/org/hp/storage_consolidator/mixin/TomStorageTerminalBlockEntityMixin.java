@@ -23,7 +23,7 @@ public abstract class TomStorageTerminalBlockEntityMixin implements TomStorageTe
     public IInventoryAccess storageConsolidator$getInventoryAccess() {
         StorageTerminalBlockEntity terminal = (StorageTerminalBlockEntity) (Object) this;
         Level level = terminal.getLevel();
-        if (level == null || level.isClientSide) {
+        if (level == null || level.isClientSide()) {
             return null;
         }
         return itemCache.getAccess(level, terminal.getBlockPos());

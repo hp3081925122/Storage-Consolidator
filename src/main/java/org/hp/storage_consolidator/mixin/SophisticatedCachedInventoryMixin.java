@@ -1,7 +1,8 @@
 package org.hp.storage_consolidator.mixin;
 
 import java.util.function.Supplier;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
 import org.hp.storage_consolidator.access.CachedInventoryAccess;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
@@ -14,5 +15,5 @@ public interface SophisticatedCachedInventoryMixin extends CachedInventoryAccess
     /** 读取当前供应器，不能缓存可能失效的底层库存。 */
     @Override
     @Accessor("wrappedHandlerGetter")
-    Supplier<? extends IItemHandler> storageConsolidator$getWrappedHandler();
+    Supplier<? extends ResourceHandler<ItemResource>> storageConsolidator$getWrappedHandler();
 }

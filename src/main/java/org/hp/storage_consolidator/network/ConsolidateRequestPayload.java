@@ -3,7 +3,7 @@ package org.hp.storage_consolidator.network;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.hp.storage_consolidator.Storage_consolidator;
@@ -15,7 +15,7 @@ import org.hp.storage_consolidator.StorageConsolidatorService;
 public record ConsolidateRequestPayload() implements CustomPacketPayload {
     public static final ConsolidateRequestPayload INSTANCE = new ConsolidateRequestPayload();
     public static final Type<ConsolidateRequestPayload> TYPE = new Type<>(
-            ResourceLocation.fromNamespaceAndPath(Storage_consolidator.MODID, "consolidate_request")
+            Identifier.fromNamespaceAndPath(Storage_consolidator.MODID, "consolidate_request")
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, ConsolidateRequestPayload> STREAM_CODEC =
             StreamCodec.unit(INSTANCE);

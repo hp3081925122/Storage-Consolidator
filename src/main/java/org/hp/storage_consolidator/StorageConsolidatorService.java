@@ -7,12 +7,14 @@ import com.tom.storagemod.inventory.PlatformFilteredInventoryAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 import org.hp.storage_consolidator.access.TomStorageBlockPositionAccess;
 import org.hp.storage_consolidator.access.TomStorageProxyAccess;
 import org.hp.storage_consolidator.access.TomStorageTerminalAccess;
@@ -22,8 +24,6 @@ import org.hp.storage_consolidator.access.CachedInventoryAccess;
 import org.hp.storage_consolidator.access.FilteredInventoryAccess;
 import org.hp.storage_consolidator.access.SophisticatedInventoryAccess;
 import org.hp.storage_consolidator.compat.ConsolidationScope;
-import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
-import net.neoforged.neoforge.items.wrapper.InvWrapper;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public final class StorageConsolidatorService {
      * 验证当前终端并整理所有可安全识别的库存来源。
      */
     public static void consolidate(ServerPlayer player) {
-        Storage_consolidator.LOGGER.info("Storage consolidation request: player={}, menu={}", player.getGameProfile().getName(), player.containerMenu.getClass().getName());
+        Storage_consolidator.LOGGER.info("Storage consolidation request: player={}, menu={}", player.getGameProfile().name(), player.containerMenu.getClass().getName());
         if (!(player.containerMenu instanceof TomStorageTerminalMenuAccess menuAccess)) {
             Storage_consolidator.LOGGER.info("Storage consolidation request rejected: reason=not_terminal_menu");
             return;
@@ -81,20 +81,20 @@ public final class StorageConsolidatorService {
 
         IInventoryAccess networkAccess = terminalAccess.storageConsolidator$getInventoryAccess();
         if (networkAccess == null) {
-            player.displayClientMessage(Component.translatable("message.storage_consolidator.no_network"), true);
+            player.sendSystemMessage(Component.translatable("message.storage_consolidator.no_network"), true);
             return;
         }
 
         // 全服务器只执行一个任务，避免多个玩家叠加每 tick 预算。
         if (activeJob != null) {
             Storage_consolidator.LOGGER.info("Storage consolidation request rejected: reason=busy, stage={}, ticks={}, moved={}", activeJob.stage, activeJob.ticks, activeJob.moved);
-            player.displayClientMessage(Component.translatable("message.storage_consolidator.busy"), true);
+            player.sendSystemMessage(Component.translatable("message.storage_consolidator.busy"), true);
             return;
         }
         activeJob = new ConsolidationJob(player, terminal, level, networkAccess);
         Storage_consolidator.LOGGER.info("Storage consolidation started: player={}, terminal={}, mode=continuous, limitMs=3000",
-                player.getGameProfile().getName(), terminal.getBlockPos());
-        player.displayClientMessage(Component.translatable("message.storage_consolidator.started"), true);
+                player.getGameProfile().name(), terminal.getBlockPos());
+        player.sendSystemMessage(Component.translatable("message.storage_consolidator.started"), true);
     }
 
     /**
@@ -119,11 +119,11 @@ public final class StorageConsolidatorService {
                     || job.terminal.isRemoved()
                     || job.ticks % 20 == 0
                     && ((TomStorageTerminalAccess) job.terminal).storageConsolidator$getInventoryAccess() != job.root) {
-                job.player.displayClientMessage(Component.translatable("message.storage_consolidator.cancelled"), true);
+                job.player.sendSystemMessage(Component.translatable("message.storage_consolidator.cancelled"), true);
                 activeJob = null;
                 Storage_consolidator.LOGGER.info(
                         "Storage consolidation cancelled by validation: player={}, terminal={}, stage={}, ticks={}, moved={}",
-                        job.player.getGameProfile().getName(), job.terminal.getBlockPos(), job.stage, job.ticks, job.moved);
+                        job.player.getGameProfile().name(), job.terminal.getBlockPos(), job.stage, job.ticks, job.moved);
                 return;
             }
             long validated = System.nanoTime();
@@ -156,21 +156,21 @@ public final class StorageConsolidatorService {
                         job.moved, job.slotOrder, job.ticks,
                         TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - job.started),
                         TimeUnit.NANOSECONDS.toMicros(job.maxTickNanos));
-                job.player.displayClientMessage(Component.translatable("message.storage_consolidator.completed", job.moved), true);
+                job.player.sendSystemMessage(Component.translatable("message.storage_consolidator.completed", job.moved), true);
                 activeJob = null;
             }
             // 三秒预算耗尽后终止本次任务，不在后续 tick 慢慢搬运。
             if (!finished) {
                 Storage_consolidator.LOGGER.warn("Storage consolidation timed out: moved={}, slots={}, elapsedMs={}",
                         job.moved, job.slotOrder, (processed - start) / 1_000_000.0);
-                job.player.displayClientMessage(Component.translatable("message.storage_consolidator.timeout", job.moved), true);
+                job.player.sendSystemMessage(Component.translatable("message.storage_consolidator.timeout", job.moved), true);
                 activeJob = null;
             }
             job.previousLoggingNanos = System.nanoTime() - processed;
         } catch (RuntimeException exception) {
             activeJob = null;
             Storage_consolidator.LOGGER.error("Storage consolidation cancelled after inventory failure", exception);
-            job.player.displayClientMessage(Component.translatable("message.storage_consolidator.cancelled"), true);
+            job.player.sendSystemMessage(Component.translatable("message.storage_consolidator.cancelled"), true);
         }
     }
 
@@ -211,7 +211,7 @@ public final class StorageConsolidatorService {
             IInventoryAccess access,
             List<InventorySource> result,
             Set<IInventoryAccess> seenAccess,
-            Set<IItemHandler> seenHandlers
+            Set<ResourceHandler<ItemResource>> seenHandlers
     ) {
         if (access == null || !seenAccess.add(access)) {
             return;
@@ -224,14 +224,14 @@ public final class StorageConsolidatorService {
             return;
         }
 
-        IItemHandler handler;
+        ResourceHandler<ItemResource> handler;
         try {
             handler = access.getPlatformHandler();
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Skipped inventory source because its handler could not be read", exception);
             return;
         }
-        if (handler == null || handler.getSlots() <= 0 || !seenHandlers.add(handler)) {
+        if (handler == null || handler.size() <= 0 || !seenHandlers.add(handler)) {
             diagnostic("source_empty_or_duplicate_handler", null, null);
             return;
         }
@@ -249,7 +249,7 @@ public final class StorageConsolidatorService {
         }
 
         if (position != null) {
-            ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(position).getBlock());
+            Identifier blockId = BuiltInRegistries.BLOCK.getKey(level.getBlockState(position).getBlock());
             if (blockId != null && Config.blockedSourceModIds.contains(blockId.getNamespace())) {
                 diagnostic("source_blocked_namespace", new SlotRef(handler, position, 0, -1), null);
                 Storage_consolidator.LOGGER.debug("Skipped blocked inventory source {} at {}", blockId, position);
@@ -259,7 +259,7 @@ public final class StorageConsolidatorService {
 
         result.add(new InventorySource(handler, position));
         // 逐条记录来源的真实位置和处理器，定位 Tom 网络是否暴露了额外库存。
-        ResourceLocation discoveredBlock = position == null
+        Identifier discoveredBlock = position == null
                 ? null
                 : BuiltInRegistries.BLOCK.getKey(level.getBlockState(position).getBlock());
         Object discoveredEntity = position == null || !level.isLoaded(position)
@@ -277,13 +277,13 @@ public final class StorageConsolidatorService {
                 System.identityHashCode(access),
                 handler.getClass().getName(),
                 System.identityHashCode(handler),
-                handler.getSlots()
+                handler.size()
         );
         // 记录访问包装及同坐标多处理器，坐标相同只作为别名线索，不直接判定同槽。
         if (activeJob != null) {
             SlotRef identity = new SlotRef(handler, position, 0, result.size() - 1);
             if (position != null) {
-                IItemHandler previous = activeJob.diagnosticPositions.putIfAbsent(position, handler);
+                ResourceHandler<ItemResource> previous = activeJob.diagnosticPositions.putIfAbsent(position, handler);
                 if (previous != null && previous != handler) {
                     diagnostic("source_multiple_handlers_same_position", identity, new SlotRef(previous, position, 0, -1));
                 }
@@ -331,7 +331,7 @@ public final class StorageConsolidatorService {
         private long lastReport = started;
         // 事件计数始终保留，详细样本按次数采样，避免长期任务无限刷屏。
         private final Map<String, Long> diagnosticCounts = new java.util.LinkedHashMap<>();
-        private final Map<BlockPos, IItemHandler> diagnosticPositions = new java.util.HashMap<>();
+        private final Map<BlockPos, ResourceHandler<ItemResource>> diagnosticPositions = new java.util.HashMap<>();
         private long transferSequence;
         private SlotRef previousSource;
         private SlotRef previousTarget;
@@ -344,14 +344,14 @@ public final class StorageConsolidatorService {
         private int slotOrder;
         private final Deque<Iterator<IInventoryAccess>> pending = new ArrayDeque<>();
         private final Set<IInventoryAccess> seenAccess = Collections.newSetFromMap(new IdentityHashMap<>());
-        private final Set<IItemHandler> seenHandlers = Collections.newSetFromMap(new IdentityHashMap<>());
+        private final Set<ResourceHandler<ItemResource>> seenHandlers = Collections.newSetFromMap(new IdentityHashMap<>());
         private final List<InventorySource> sources = new ArrayList<>();
         // 保存方块实体身份，避免原容器被替换后继续操作旧处理器。
         private final Map<BlockPos, net.minecraft.world.level.block.entity.BlockEntity> sourceEntities = new java.util.HashMap<>();
         private final Map<Item, List<ItemGroup>> byItem = new IdentityHashMap<>();
         private final List<ItemGroup> groups = new ArrayList<>();
         private final TargetIndex emptyIndex = new TargetIndex();
-        private final Map<IItemHandler, Boolean> voidCache = new IdentityHashMap<>();
+        private final Map<ResourceHandler<ItemResource>, Boolean> voidCache = new IdentityHashMap<>();
         private int sourceScan;
         private int slotScan;
         private int groupIndex;
@@ -432,7 +432,7 @@ public final class StorageConsolidatorService {
                         continue;
                     }
                     InventorySource inventory = sources.get(sourceScan);
-                    if (slotScan >= inventory.handler().getSlots()) {
+                    if (slotScan >= inventory.handler().size()) {
                         sourceScan++;
                         slotScan = 0;
                         continue;
@@ -589,7 +589,7 @@ public final class StorageConsolidatorService {
             ItemStack sourceStack,
             SlotRef candidate,
             List<TargetCandidate> targets,
-            Map<IItemHandler, Boolean> voidUpgradeCache
+            Map<ResourceHandler<ItemResource>, Boolean> voidUpgradeCache
     ) {
             if (sameSlot(source, candidate)) {
                 diagnostic("candidate_same_physical_slot", source, candidate);
@@ -641,15 +641,15 @@ public final class StorageConsolidatorService {
     /**
      * 缓存目标处理器的 void 升级检测结果，避免整理大量槽位时重复反射查询。
      */
-    private static boolean hasVoidUpgrade(IItemHandler handler, Map<IItemHandler, Boolean> cache) {
+    private static boolean hasVoidUpgrade(ResourceHandler<ItemResource> handler, Map<ResourceHandler<ItemResource>, Boolean> cache) {
         return cache.computeIfAbsent(handler, StorageConsolidatorService::detectVoidUpgrade);
     }
 
     /**
      * 通过 Sophisticated Core 当前版本的真实内部 API 检查库存是否安装了 void 升级。
      */
-    private static boolean detectVoidUpgrade(IItemHandler handler) {
-        IItemHandler inspectedHandler;
+    private static boolean detectVoidUpgrade(ResourceHandler<ItemResource> handler) {
+        ResourceHandler<ItemResource> inspectedHandler;
         try {
             inspectedHandler = unwrapFilteredHandler(handler);
         } catch (RuntimeException exception) {
@@ -700,29 +700,32 @@ public final class StorageConsolidatorService {
     /**
      * 解除 Tom's Storage 为过滤器创建的处理器包装，以便检查底层真实库存类型。
      */
-    private static IItemHandler unwrapFilteredHandler(IItemHandler handler) {
-        IItemHandler current = handler;
+    private static ResourceHandler<ItemResource> unwrapFilteredHandler(ResourceHandler<ItemResource> handler) {
+        ResourceHandler<ItemResource> current = handler;
         while (true) {
             // 过滤包装不改变槽位索引；原外层仍负责拦截实际插入与抽取。
             if (current instanceof FilteredInventoryAccess filtered) {
-                IItemHandler actual = filtered.storageConsolidator$getInventory();
+                ResourceHandler<ItemResource> actual = filtered.storageConsolidator$getInventoryHandler();
                 if (actual == null || actual == current) return current;
                 current = actual;
                 continue;
             }
             // 缓存包装不改变槽位映射，只用于解析身份与容量。
             if (current instanceof CachedInventoryAccess cached) {
-                IItemHandler actual = cached.storageConsolidator$getWrappedHandler().get();
+                ResourceHandler<ItemResource> actual = cached.storageConsolidator$getWrappedHandler().get();
                 if (actual == null || actual == current) return current;
                 current = actual;
                 continue;
             }
             if (!(current instanceof PlatformFilteredInventoryAccess filteredAccess)) return current;
             Object actual = filteredAccess.getActualInventory().getPlatformHandler();
-            if (!(actual instanceof IItemHandler actualHandler) || actualHandler == current) {
+            if (!(actual instanceof ResourceHandler<?> actualHandler)) {
                 return current;
             }
-            current = actualHandler;
+            if (actualHandler == current) return current;
+            @SuppressWarnings("unchecked")
+            ResourceHandler<ItemResource> typedHandler = (ResourceHandler<ItemResource>) actualHandler;
+            current = typedHandler;
         }
     }
 
@@ -742,7 +745,7 @@ public final class StorageConsolidatorService {
      */
     private static boolean isValidTarget(SlotRef target, ItemStack template) {
         try {
-            return target.handler().isItemValid(target.index(), template);
+            return target.handler().isValid(target.index(), ItemResource.of(template));
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Skipped a target slot because its validity check failed", exception);
             return false;
@@ -763,12 +766,10 @@ public final class StorageConsolidatorService {
         }
         try {
             int requested = Math.min(amount, limit);
-            ItemStack remainder = target.handler().insertItem(
-                    target.index(),
-                    sourceStack.copyWithCount(requested),
-                    true
-            );
-            return requested - remainder.getCount();
+            try (Transaction transaction = Transaction.openRoot()) {
+                return target.handler().insert(
+                        target.index(), ItemResource.of(sourceStack), requested, transaction);
+            }
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Skipped a target slot because its simulated insertion failed", exception);
             return 0;
@@ -781,12 +782,13 @@ public final class StorageConsolidatorService {
     private static int effectiveStackLimit(SlotRef target, ItemStack template) {
         try {
             // 容量升级可超过物品默认堆叠数，使用上游实际槽位上限。
-            IItemHandler inner = unwrapFilteredHandler(target.handler());
+            ResourceHandler<ItemResource> inner = unwrapFilteredHandler(target.handler());
             if (inner instanceof SophisticatedInventoryAccess access) {
                 return access.storageConsolidator$canSort(target.index())
                         ? access.storageConsolidator$stackLimit(target.index(), template) : 0;
             }
-            return Math.min(target.handler().getSlotLimit(target.index()), template.getMaxStackSize());
+            long capacity = target.handler().getCapacityAsLong(target.index(), ItemResource.of(template));
+            return (int) Math.min(Integer.MAX_VALUE, Math.min(capacity, template.getMaxStackSize()));
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Could not read a target slot limit", exception);
             return 0;
@@ -816,45 +818,49 @@ public final class StorageConsolidatorService {
             return 0;
         }
 
-        ItemStack extractedPreview;
+        int extractedPreview;
         try {
-            extractedPreview = source.handler().extractItem(source.index(), possible, true);
+            try (Transaction transaction = Transaction.openRoot()) {
+                extractedPreview = source.handler().extract(
+                        source.index(), ItemResource.of(sourceStack), possible, transaction);
+            }
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Skipped a source slot because its simulated extraction failed", exception);
             diagnostic("transfer_simulated_extract_exception", source, target);
             return 0;
         }
-        if (extractedPreview.isEmpty()) {
+        if (extractedPreview <= 0) {
             diagnostic("transfer_simulated_extract_empty", source, target);
             return 0;
         }
 
-        ItemStack extracted;
+        ItemResource resource = ItemResource.of(sourceBefore);
+        int extractedCount;
+        int inserted;
         try {
-            extracted = source.handler().extractItem(source.index(), extractedPreview.getCount(), false);
+            try (Transaction transaction = Transaction.openRoot()) {
+                extractedCount = source.handler().extract(source.index(), resource, extractedPreview, transaction);
+                if (extractedCount <= 0) {
+                    diagnostic("transfer_actual_extract_empty", source, target);
+                    return 0;
+                }
+                inserted = target.handler().insert(target.index(), resource, extractedCount, transaction);
+                transaction.commit();
+            }
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Skipped a source slot because its extraction failed", exception);
             diagnostic("transfer_actual_extract_exception", source, target);
             return 0;
         }
-        if (extracted.isEmpty()) {
+        if (extractedCount <= 0) {
             diagnostic("transfer_actual_extract_empty", source, target);
             return 0;
         }
 
         ItemStack sourceAfterExtract = readStack(source);
         ItemStack targetAfterExtract = readStack(target);
-        ItemStack remainder;
-        try {
-            remainder = target.handler().insertItem(target.index(), extracted.copy(), false);
-        } catch (RuntimeException exception) {
-            player.getInventory().placeItemBackInInventory(extracted);
-            Storage_consolidator.LOGGER.error("Target insertion failed after extraction; returned items to player", exception);
-            diagnostic("transfer_insert_exception_returned_to_player", source, target);
-            return 0;
-        }
-
-        int inserted = extracted.getCount() - remainder.getCount();
+        ItemStack extracted = resource.toStack(extractedCount);
+        ItemStack remainder = resource.toStack(Math.max(0, extractedCount - inserted));
         if (!remainder.isEmpty()) {
             player.getInventory().placeItemBackInInventory(remainder);
             Storage_consolidator.LOGGER.error("A target accepted only part of a simulated transfer; returned the remainder to player");
@@ -890,7 +896,7 @@ public final class StorageConsolidatorService {
                         "Storage consolidation transfer: seq={}, tick={}, group={}, sourceCursor={}, src={}, dst={}, item={}, componentsHash={}, requested={}, simulatedExtract={}, actualExtract={}, remainder={}, reportedInserted={}, srcCounts={}->{}->{}, dstCounts={}->{}->{}, unchanged={}, mismatch={}, repeated={}, reversed={}, elapsedUs={}",
                         sequence, job.ticks, job.groupIndex, job.sourceIndex, describeSlot(source), describeSlot(target),
                         BuiltInRegistries.ITEM.getKey(sourceBefore.getItem()), sourceBefore.getComponents().hashCode(),
-                        possible, extractedPreview.getCount(), extracted.getCount(), remainder.getCount(), inserted,
+                        possible, extractedPreview, extracted.getCount(), remainder.getCount(), inserted,
                         sourceBefore.getCount(), sourceAfterExtract.getCount(), sourceAfter.getCount(),
                         targetBefore.getCount(), targetAfterExtract.getCount(), targetAfter.getCount(),
                         unchanged, mismatch, job.repeatedPair, reversed, (System.nanoTime() - transferStarted) / 1000.0);
@@ -924,7 +930,7 @@ public final class StorageConsolidatorService {
     private static String describeSlot(SlotRef slot) {
         if (slot == null) return "none";
         try {
-            IItemHandler inner = unwrapFilteredHandler(slot.handler());
+            ResourceHandler<ItemResource> inner = unwrapFilteredHandler(slot.handler());
             // 输出真实库存身份和槽位，便于核对不同方向包装是否指向同一位置。
             PhysicalSlot physical = physicalSlot(slot);
             Object entity = activeJob == null || slot.position() == null
@@ -935,7 +941,8 @@ public final class StorageConsolidatorService {
                     + "/physical=" + physical.inventory().getClass().getName() + "@"
                     + System.identityHashCode(physical.inventory()) + ":" + physical.index()
                     + "/entity=" + (entity == null ? "none" : entity.getClass().getName() + "@" + System.identityHashCode(entity))
-                    + "/live=" + isLive(slot) + "/slotLimit=" + slot.handler().getSlotLimit(slot.index());
+                    + "/live=" + isLive(slot) + "/slotLimit="
+                    + slot.handler().getCapacityAsLong(slot.index(), ItemResource.of(readStack(slot)));
         } catch (RuntimeException exception) {
             return "pos=" + slot.position() + "/slot=" + slot.index() + "/diagnosticError=" + exception.getClass().getName();
         }
@@ -962,17 +969,18 @@ public final class StorageConsolidatorService {
      * 方向包装索引必须经真实映射转换；物品操作仍经过原包装以保留方向和过滤限制。
      */
     private static PhysicalSlot physicalSlot(SlotRef slot) {
-        IItemHandler handler = unwrapFilteredHandler(slot.handler());
+        ResourceHandler<ItemResource> handler = unwrapFilteredHandler(slot.handler());
         if (handler instanceof SidedInventoryAccess sided) {
-            int index = SidedInvWrapper.getSlot(sided.storageConsolidator$getContainer(),
-                    slot.index(), sided.storageConsolidator$getSide());
+            int[] slots = sided.storageConsolidator$getContainer()
+                    .getSlotsForFace(sided.storageConsolidator$getSide());
+            if (slot.index() < 0 || slot.index() >= slots.length) {
+                throw new IllegalStateException("Invalid sided inventory slot mapping: " + slot.index());
+            }
+            int index = slots[slot.index()];
             if (index < 0) {
                 throw new IllegalStateException("Invalid sided inventory slot mapping: " + slot.index());
             }
             return new PhysicalSlot(sided.storageConsolidator$getContainer(), index);
-        }
-        if (handler instanceof InvWrapper wrapper) {
-            return new PhysicalSlot(wrapper.getInv(), slot.index());
         }
         return new PhysicalSlot(handler, slot.index());
     }
@@ -1001,11 +1009,15 @@ public final class StorageConsolidatorService {
         }
         try {
             // 特殊分区和禁止整理槽位不进入来源或目标候选。
-            IItemHandler inner = unwrapFilteredHandler(slot.handler());
+            ResourceHandler<ItemResource> inner = unwrapFilteredHandler(slot.handler());
             if (inner instanceof SophisticatedInventoryAccess access
                     && !access.storageConsolidator$canSort(slot.index())) return ItemStack.EMPTY;
-            ItemStack stack = slot.handler().getStackInSlot(slot.index());
-            return stack == null ? ItemStack.EMPTY : stack.copy();
+            ItemResource resource = slot.handler().getResource(slot.index());
+            long amount = slot.handler().getAmountAsLong(slot.index());
+            if (resource == null || resource.isEmpty() || amount <= 0) {
+                return ItemStack.EMPTY;
+            }
+            return resource.toStack((int) Math.min(Integer.MAX_VALUE, amount)).copy();
         } catch (RuntimeException exception) {
             diagnostic("slot_read_exception", slot, null);
             Storage_consolidator.LOGGER.debug("Could not read an inventory slot", exception);
@@ -1043,11 +1055,11 @@ public final class StorageConsolidatorService {
         }
     }
 
-    private record InventorySource(IItemHandler handler, BlockPos position) {
+    private record InventorySource(ResourceHandler<ItemResource> handler, BlockPos position) {
     }
 
 
-    private record SlotRef(IItemHandler handler, BlockPos position, int index, int order) {
+    private record SlotRef(ResourceHandler<ItemResource> handler, BlockPos position, int index, int order) {
     }
 
     private record TargetCandidate(SlotRef slot, boolean sameItem, int limit, int count, int free) {

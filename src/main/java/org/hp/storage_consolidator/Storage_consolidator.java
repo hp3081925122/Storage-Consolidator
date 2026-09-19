@@ -9,6 +9,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.hp.storage_consolidator.command.StressTestCommand;
+import org.hp.storage_consolidator.compat.SophisticatedCompatSelfTest;
 import org.hp.storage_consolidator.network.ConsolidateRequestPayload;
 import org.slf4j.Logger;
 
@@ -25,7 +26,10 @@ public final class Storage_consolidator {
      */
     public Storage_consolidator(IEventBus modEventBus, ModContainer modContainer) {
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        // 在模组事件总线上接收配置加载事件，适配 26.1.2 的配置事件层级。
+        modEventBus.addListener(Config::onLoad);
         modEventBus.addListener(Storage_consolidator::registerPayloads);
+        modEventBus.addListener(SophisticatedCompatSelfTest::registerGameTest);
         NeoForge.EVENT_BUS.addListener(StressTestCommand::register);
         // 按服务端 tick 推进整理，并在世界退出后释放任务。
         NeoForge.EVENT_BUS.addListener(StorageConsolidatorService::onServerTick);
