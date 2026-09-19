@@ -1,0 +1,12 @@
+{
+  "button.storage_consolidator.consolidate": "Consolidate",
+  "message.storage_consolidator.completed": "Consolidated %s items",
+  "message.storage_consolidator.no_network": "No storage network is available for consolidation",
+  "message.storage_consolidator.started": "Consolidating continuously for up to three seconds; closing the screen does not cancel",
+  "message.storage_consolidator.busy": "A consolidation task is already running",
+  "message.storage_consolidator.cancelled": "Consolidation cancelled because the terminal, distance, or network changed",
+  "message.storage_consolidator.timeout": "Consolidation reached the three-second safety limit after moving %s items",
+  "message.storage_consolidator.stress.created": "Stress test scene created: %s item stacks in %s containers (%s copies per type); terminal at %s",
+  "message.storage_consolidator.stress.no_terminal": "Tom's Storage terminal, cable, or connector could not be found",
+  "message.storage_consolidator.stress.no_containers": "No supported test container blocks were found"
+}

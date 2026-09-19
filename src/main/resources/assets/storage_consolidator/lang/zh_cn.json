@@ -1,0 +1,12 @@
+{
+  "button.storage_consolidator.consolidate": "整理",
+  "message.storage_consolidator.completed": "已整理 %s 个物品",
+  "message.storage_consolidator.no_network": "当前终端没有可整理的库存网络",
+  "message.storage_consolidator.started": "正在整理，连续执行最多三秒；关闭界面不取消任务",
+  "message.storage_consolidator.busy": "当前已有整理任务正在进行",
+  "message.storage_consolidator.cancelled": "整理已取消：终端、距离或库存网络状态已改变",
+  "message.storage_consolidator.timeout": "整理达到三秒安全上限，已搬运 %s 个物品",
+  "message.storage_consolidator.stress.created": "压力测试场景已生成：实际写入 %s 个物品堆，共 %s 个容器（每类复制 %s 份）；终端位置：%s",
+  "message.storage_consolidator.stress.no_terminal": "无法找到 Tom's Storage 的终端、线缆或连接器",
+  "message.storage_consolidator.stress.no_containers": "没有找到可用的测试容器方块"
+}

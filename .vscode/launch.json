@@ -1,0 +1,93 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Client",
+      "presentation": {
+        "group": "Mod Development - Storage Consolidator",
+        "order": 0
+      },
+      "projectName": "Storage Consolidator",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\clientRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\clientRunVmArgs.txt",
+        "-Dfml.modFolders\u003dstorage_consolidator%%E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Data",
+      "presentation": {
+        "group": "Mod Development - Storage Consolidator",
+        "order": 1
+      },
+      "projectName": "Storage Consolidator",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\dataRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\dataRunVmArgs.txt",
+        "-Dfml.modFolders\u003dstorage_consolidator%%E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "GameTestServer",
+      "presentation": {
+        "group": "Mod Development - Storage Consolidator",
+        "order": 2
+      },
+      "projectName": "Storage Consolidator",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\gameTestServerRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\gameTestServerRunVmArgs.txt",
+        "-Dfml.modFolders\u003dstorage_consolidator%%E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    },
+    {
+      "type": "java",
+      "request": "launch",
+      "name": "Server",
+      "presentation": {
+        "group": "Mod Development - Storage Consolidator",
+        "order": 3
+      },
+      "projectName": "Storage Consolidator",
+      "mainClass": "net.neoforged.devlaunch.Main",
+      "args": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\serverRunProgramArgs.txt"
+      ],
+      "vmArgs": [
+        "@E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\build\\moddev\\serverRunVmArgs.txt",
+        "-Dfml.modFolders\u003dstorage_consolidator%%E:\\模组\\发cf的模组\\Storage Consolidator\\Storage Consolidator\\bin\\main"
+      ],
+      "cwd": "${workspaceFolder}\\run",
+      "env": {},
+      "console": "internalConsole",
+      "shortenCommandLine": "none"
+    }
+  ]
+}
