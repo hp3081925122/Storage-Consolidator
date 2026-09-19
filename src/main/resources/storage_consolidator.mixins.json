@@ -4,6 +4,9 @@
   "package": "org.hp.storage_consolidator.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "SophisticatedCachedInventoryMixin",
+    "SophisticatedFilteredInventoryMixin",
+    "SophisticatedInventoryMixin",
     "SidedInvWrapperMixin",
     "TomStorageTerminalBlockEntityMixin",
     "TomStorageTerminalMenuMixin",

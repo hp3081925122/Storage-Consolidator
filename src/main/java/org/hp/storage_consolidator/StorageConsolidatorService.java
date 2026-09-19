@@ -18,6 +18,10 @@ import org.hp.storage_consolidator.access.TomStorageProxyAccess;
 import org.hp.storage_consolidator.access.TomStorageTerminalAccess;
 import org.hp.storage_consolidator.access.TomStorageTerminalMenuAccess;
 import org.hp.storage_consolidator.access.SidedInventoryAccess;
+import org.hp.storage_consolidator.access.CachedInventoryAccess;
+import org.hp.storage_consolidator.access.FilteredInventoryAccess;
+import org.hp.storage_consolidator.access.SophisticatedInventoryAccess;
+import org.hp.storage_consolidator.compat.ConsolidationScope;
 import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
 import net.neoforged.neoforge.items.wrapper.InvWrapper;
 
@@ -94,7 +98,7 @@ public final class StorageConsolidatorService {
     }
 
     /**
-     * 每 tick 使用一份共享预算，界面关闭不会影响任务继续运行。
+     * 在下一次服务端回调中连续整理，界面关闭不会取消已提交任务。
      */
     public static void onServerTick(ServerTickEvent.Post event) {
         ConsolidationJob job = activeJob;
@@ -124,7 +128,11 @@ public final class StorageConsolidatorService {
             }
             long validated = System.nanoTime();
             TickBudget budget = new TickBudget(start);
-            boolean finished = job.process(budget);
+            boolean finished;
+            // 仅在整理调用内启用专用槽位规则，异常也会自动清理作用域。
+            try (ConsolidationScope scope = new ConsolidationScope()) {
+                finished = job.process(budget);
+            }
             long processed = System.nanoTime();
             job.ticks++;
             // 连续处理结束后统一记录耗时，避免逐 tick 拆分。
@@ -377,7 +385,7 @@ public final class StorageConsolidatorService {
         private boolean process(TickBudget budget) {
             while (budget.available()) {
                 budget.checks++;
-                // 执行阶段连续提交计划，达到任意预算后保留游标到下一 tick。
+                // 依次展开网络、建立物品索引并直接执行搬运。
                 // 第一阶段逐个展开访问器，避免递归一次遍历整个网络。
                 if (stage == 0) {
                     if (pending.isEmpty()) {
@@ -652,6 +660,8 @@ public final class StorageConsolidatorService {
             return true;
         }
         Class<?> currentType = inspectedHandler.getClass();
+        // 已安装适配的库存会在整理期间抑制销毁回调，可正常参与搬运。
+        if (inspectedHandler instanceof SophisticatedInventoryAccess) return false;
         boolean isSophisticatedHandler = false;
         while (currentType != null) {
             if (currentType.getName().equals("net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler")) {
@@ -692,14 +702,28 @@ public final class StorageConsolidatorService {
      */
     private static IItemHandler unwrapFilteredHandler(IItemHandler handler) {
         IItemHandler current = handler;
-        while (current instanceof PlatformFilteredInventoryAccess filteredAccess) {
+        while (true) {
+            // 过滤包装不改变槽位索引；原外层仍负责拦截实际插入与抽取。
+            if (current instanceof FilteredInventoryAccess filtered) {
+                IItemHandler actual = filtered.storageConsolidator$getInventory();
+                if (actual == null || actual == current) return current;
+                current = actual;
+                continue;
+            }
+            // 缓存包装不改变槽位映射，只用于解析身份与容量。
+            if (current instanceof CachedInventoryAccess cached) {
+                IItemHandler actual = cached.storageConsolidator$getWrappedHandler().get();
+                if (actual == null || actual == current) return current;
+                current = actual;
+                continue;
+            }
+            if (!(current instanceof PlatformFilteredInventoryAccess filteredAccess)) return current;
             Object actual = filteredAccess.getActualInventory().getPlatformHandler();
             if (!(actual instanceof IItemHandler actualHandler) || actualHandler == current) {
                 return current;
             }
             current = actualHandler;
         }
-        return current;
     }
 
     /**
@@ -756,6 +780,12 @@ public final class StorageConsolidatorService {
      */
     private static int effectiveStackLimit(SlotRef target, ItemStack template) {
         try {
+            // 容量升级可超过物品默认堆叠数，使用上游实际槽位上限。
+            IItemHandler inner = unwrapFilteredHandler(target.handler());
+            if (inner instanceof SophisticatedInventoryAccess access) {
+                return access.storageConsolidator$canSort(target.index())
+                        ? access.storageConsolidator$stackLimit(target.index(), template) : 0;
+            }
             return Math.min(target.handler().getSlotLimit(target.index()), template.getMaxStackSize());
         } catch (RuntimeException exception) {
             Storage_consolidator.LOGGER.debug("Could not read a target slot limit", exception);
@@ -970,6 +1000,10 @@ public final class StorageConsolidatorService {
             return ItemStack.EMPTY;
         }
         try {
+            // 特殊分区和禁止整理槽位不进入来源或目标候选。
+            IItemHandler inner = unwrapFilteredHandler(slot.handler());
+            if (inner instanceof SophisticatedInventoryAccess access
+                    && !access.storageConsolidator$canSort(slot.index())) return ItemStack.EMPTY;
             ItemStack stack = slot.handler().getStackInSlot(slot.index());
             return stack == null ? ItemStack.EMPTY : stack.copy();
         } catch (RuntimeException exception) {
