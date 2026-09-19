@@ -2,7 +2,7 @@
   "button.storage_consolidator.consolidate": "Consolidate",
   "message.storage_consolidator.completed": "Consolidated %s items",
   "message.storage_consolidator.no_network": "No storage network is available for consolidation",
-  "message.storage_consolidator.started": "Consolidation continues if it is not complete within three seconds; closing the screen does not cancel the task",
+  "message.storage_consolidator.started": "Consolidating",
   "message.storage_consolidator.busy": "A consolidation task is already running",
   "message.storage_consolidator.cancelled": "Consolidation cancelled because the terminal, distance, or network changed",
   "message.storage_consolidator.stress.created": "Stress test scene created: %s item stacks in %s containers (%s copies per type); terminal at %s",
