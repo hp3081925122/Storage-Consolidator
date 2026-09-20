@@ -114,9 +114,15 @@ public final class StressTestCommand {
         CommandSourceStack source = context.getSource();
         ServerPlayer player = source.getPlayerOrException();
         ServerLevel level = player.serverLevel();
-        Block terminalBlock = getBlock(new ResourceLocation("toms_storage", "storage_terminal"));
-        Block cableBlock = getBlock(new ResourceLocation("toms_storage", "inventory_cable"));
-        Block connectorBlock = getBlock(new ResourceLocation("toms_storage", "inventory_connector"));
+        Block terminalBlock = getBlock(new ResourceLocation("toms_storage", "ts.storage_terminal"));
+        Block cableBlock = getBlock(new ResourceLocation("toms_storage", "ts.inventory_cable"));
+        Block connectorBlock = getBlock(new ResourceLocation("toms_storage", "ts.inventory_connector"));
+        Storage_consolidator.LOGGER.debug(
+                "Stress test block lookup: terminal={}, cable={}, connector={}",
+                terminalBlock != null,
+                cableBlock != null,
+                connectorBlock != null
+        );
         if (terminalBlock == null || cableBlock == null || connectorBlock == null) {
             source.sendFailure(Component.translatable("message.storage_consolidator.stress.no_terminal"));
             return 0;
@@ -200,7 +206,7 @@ public final class StressTestCommand {
     }
 
     /**
-     * 通过 NeoForge 物品能力向容器的每个槽位写入不同数量的可堆叠物品。
+     * 通过 Forge 物品能力向容器的每个槽位写入不同数量的可堆叠物品。
      */
     private static int fillContainer(ServerLevel level, BlockPos position, int slotsPerContainer, int containerIndex) {
         BlockState state = level.getBlockState(position);
