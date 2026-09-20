@@ -1,7 +1,7 @@
 package org.hp.storage_consolidator.mixin.client;
 
+import com.tom.storagemod.gui.AbstractStorageTerminalScreen;
 import com.tom.storagemod.gui.GuiButton;
-import com.tom.storagemod.gui.StorageTerminalScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,9 +18,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** 在 Tom's Storage 1.20.1 终端左侧增加一键整理按钮。 */
 @OnlyIn(Dist.CLIENT)
-@Mixin(value = StorageTerminalScreen.class, remap = false)
+@Mixin(value = AbstractStorageTerminalScreen.class, remap = false)
 public abstract class TomStorageTerminalScreenMixin extends Screen {
-    /** Tom's Storage 原有的排序按钮，用于对齐新增按钮。 */
+    /** Tom's Storage 原有的排序按钮，用于核对新按钮的相对位置。 */
     @Shadow
     protected GuiButton buttonSortingType;
 
@@ -29,7 +29,7 @@ public abstract class TomStorageTerminalScreenMixin extends Screen {
         super(title);
     }
 
-    /** 在原终端按钮创建完成后追加整理按钮。 */
+    /** 在原终端控件创建完成后，把整理按钮加入可绘制控件列表。 */
     @Inject(method = "init", at = @At("TAIL"))
     private void storageConsolidator$addConsolidateButton(CallbackInfo callbackInfo) {
         if (buttonSortingType == null) {
@@ -39,17 +39,18 @@ public abstract class TomStorageTerminalScreenMixin extends Screen {
             );
             return;
         }
+
         int buttonX = buttonSortingType.getX() - 40;
         int buttonY = buttonSortingType.getY();
         Storage_consolidator.LOGGER.debug(
-                "Adding consolidate button: screen={}, sortingButton=({},{}), consolidateButton=({},{}), size={}x{}",
+                "Adding consolidate button through renderable widget: screen={}, sortingButton=({},{}), button=({},{}), size={}x{}",
                 getClass().getName(),
                 buttonSortingType.getX(),
                 buttonSortingType.getY(),
                 buttonX,
                 buttonY,
                 36,
-                32
+                20
         );
         // 客户端只发送请求，库存读写始终留在服务端。
         addRenderableWidget(Button.builder(
@@ -60,6 +61,6 @@ public abstract class TomStorageTerminalScreenMixin extends Screen {
                         ConsolidateRequestPayload.sendToServer();
                     }
                 }
-        ).bounds(buttonX, buttonY, 36, 32).build());
+        ).bounds(buttonX, buttonY, 36, 20).build());
     }
 }
