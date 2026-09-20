@@ -12,12 +12,11 @@ import net.p3pp3rf1y.sophisticatedcore.settings.memory.MemorySettingsCategory;
 import net.p3pp3rf1y.sophisticatedcore.settings.nosort.NoSortSettingsCategory;
 import net.p3pp3rf1y.sophisticatedcore.upgrades.IOverflowResponseUpgrade;
 import org.hp.storage_consolidator.Storage_consolidator;
-import org.hp.storage_consolidator.access.CachedInventoryAccess;
 import org.hp.storage_consolidator.access.SophisticatedInventoryAccess;
 
 /** 在独立测试世界验证真实箱子库存，不修改玩家存档。 */
-@net.neoforged.neoforge.gametest.GameTestHolder("storage_consolidator")
-@net.neoforged.neoforge.gametest.PrefixGameTestTemplate(false)
+@net.minecraftforge.gametest.GameTestHolder("storage_consolidator")
+@net.minecraftforge.gametest.PrefixGameTestTemplate(false)
 public final class SophisticatedCompatSelfTest {
     private SophisticatedCompatSelfTest() {}
 
@@ -26,17 +25,16 @@ public final class SophisticatedCompatSelfTest {
     public static void run(net.minecraft.gametest.framework.GameTestHelper helper) {
         try {
             // 通过真实注册方块构造独立箱子实体，避免模拟处理器掩盖上游行为。
-            var block = BuiltInRegistries.BLOCK.get(ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "diamond_chest"));
+            var block = BuiltInRegistries.BLOCK.get(new ResourceLocation("sophisticatedstorage", "diamond_chest"));
             var entity = ((EntityBlock) block).newBlockEntity(BlockPos.ZERO, block.defaultBlockState());
             // 使用测试世界的注册表和配方上下文，但不将箱子放入世界。
             entity.setLevel(helper.getLevel());
             IStorageWrapper wrapper = (IStorageWrapper) entity.getClass().getMethod("getStorageWrapper").invoke(entity);
             InventoryHandler inventory = wrapper.getInventoryHandler();
             // 从真实方块取得与 Tom 访问相同的外部能力处理器。
-            var cached = (net.neoforged.neoforge.items.IItemHandler) entity.getClass()
+            var cached = (net.minecraftforge.items.IItemHandler) entity.getClass()
                     .getMethod("getExternalItemHandler", net.minecraft.core.Direction.class)
                     .invoke(entity, net.minecraft.core.Direction.DOWN);
-            require(cached instanceof CachedInventoryAccess, "cached wrapper mixin");
             require(inventory instanceof SophisticatedInventoryAccess, "inventory mixin");
             var access = (SophisticatedInventoryAccess) inventory;
 
@@ -51,7 +49,7 @@ public final class SophisticatedCompatSelfTest {
             require(inventory.getStackInSlot(0).getCount() == 55 && inventory.getStackInSlot(1).getCount() == 64, "exact slot conservation");
 
             // 安装真实销毁升级，满槽整理必须返回全部剩余物。
-            var voidItem = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "void_upgrade"));
+            var voidItem = BuiltInRegistries.ITEM.get(new ResourceLocation("sophisticatedstorage", "void_upgrade"));
             require(voidItem != Items.AIR, "void upgrade registered");
             wrapper.getUpgradeHandler().setStackInSlot(0, new ItemStack(voidItem));
             require(!wrapper.getUpgradeHandler().getWrappersThatImplementFromMainStorage(IOverflowResponseUpgrade.class).isEmpty(), "void upgrade active");
@@ -88,7 +86,7 @@ public final class SophisticatedCompatSelfTest {
             }
 
             // 真实堆叠升级允许超过六十四，适配不能截断上游容量。
-            var stackItem = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "stack_upgrade_tier_1"));
+            var stackItem = BuiltInRegistries.ITEM.get(new ResourceLocation("sophisticatedstorage", "stack_upgrade_tier_1"));
             require(stackItem != Items.AIR, "stack upgrade registered");
             wrapper.getUpgradeHandler().setStackInSlot(0, new ItemStack(stackItem));
             require(access.storageConsolidator$stackLimit(1, new ItemStack(Items.IRON_INGOT)) > 64, "stack capacity");
@@ -100,12 +98,12 @@ public final class SophisticatedCompatSelfTest {
 
             // 安装真实输入过滤升级，确认定向插入没有绕过外层白名单。
             wrapper.getUpgradeHandler().setStackInSlot(0, ItemStack.EMPTY);
-            var filterItem = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "filter_upgrade"));
+            var filterItem = BuiltInRegistries.ITEM.get(new ResourceLocation("sophisticatedstorage", "filter_upgrade"));
             require(filterItem != Items.AIR, "filter upgrade registered");
             wrapper.getUpgradeHandler().setStackInSlot(0, new ItemStack(filterItem));
             var filters = wrapper.getUpgradeHandler().getWrappersThatImplement(net.p3pp3rf1y.sophisticatedcore.api.IIOFilterUpgrade.class);
             require(!filters.isEmpty(), "input filter upgrade active");
-            var filter = filters.getFirst().getInputFilter().orElseThrow();
+            var filter = filters.get(0).getInputFilter().orElseThrow();
             filter.setAllowList(true);
             filter.getFilterHandler().setStackInSlot(0, new ItemStack(Items.DIRT));
             wrapper.refreshInventoryForInputOutput();
@@ -116,7 +114,7 @@ public final class SophisticatedCompatSelfTest {
             }
 
             // 自动合成升级不能把整理中的铁锭转换成铁块。
-            var compactItem = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "compacting_upgrade"));
+            var compactItem = BuiltInRegistries.ITEM.get(new ResourceLocation("sophisticatedstorage", "compacting_upgrade"));
             require(compactItem != Items.AIR, "compacting upgrade registered");
             wrapper.getUpgradeHandler().setStackInSlot(0, new ItemStack(compactItem));
             try (var scope = new ConsolidationScope()) {

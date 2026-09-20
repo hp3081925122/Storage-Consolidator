@@ -2,16 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "package": "org.hp.storage_consolidator.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "SophisticatedCachedInventoryMixin",
-    "SophisticatedFilteredInventoryMixin",
     "SophisticatedInventoryMixin",
-    "SidedInvWrapperMixin",
-    "TomStorageTerminalBlockEntityMixin",
-    "TomStorageTerminalMenuMixin",
-    "TomStorageBlockInventoryAccessMixin",
-    "TomStorageProxyInventoryAccessMixin"
+    "TomStorageTerminalBlockEntityMixin"
   ],
   "client": [
     "client.TomStorageTerminalScreenMixin"

@@ -1,10 +1,9 @@
 package org.hp.storage_consolidator.access;
 
-import com.tom.storagemod.inventory.IInventoryAccess;
+import net.minecraftforge.items.IItemHandler;
 
-/**
- * 向整理服务暴露 Tom's Storage 终端的真实网络访问器。
- */
+/** 向整理服务暴露 Tom's Storage 1.20.1 Forge 终端的合并库存处理器。 */
 public interface TomStorageTerminalAccess {
-    IInventoryAccess storageConsolidator$getInventoryAccess();
+    /** 返回终端当前维护的网络库存处理器。 */
+    IItemHandler storageConsolidator$getItemHandler();
 }

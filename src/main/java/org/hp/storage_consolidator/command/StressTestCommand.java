@@ -19,10 +19,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.items.IItemHandler;
+import net.minecraftforge.items.IItemHandlerModifiable;
 import org.hp.storage_consolidator.Storage_consolidator;
 
 import java.util.ArrayList;
@@ -38,34 +38,34 @@ public final class StressTestCommand {
     private static final int GRID_WIDTH = 16;
 
     private static final List<ResourceLocation> TEST_ITEMS = List.of(
-            ResourceLocation.fromNamespaceAndPath("minecraft", "dirt"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "cobblestone"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "stone"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "oak_log"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "iron_ingot"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "gold_ingot"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "redstone"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "lapis_lazuli"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "coal"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "quartz"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "amethyst_shard"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "paper"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "glass"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "sand"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "gravel"),
-            ResourceLocation.fromNamespaceAndPath("minecraft", "netherrack")
+            new ResourceLocation("minecraft", "dirt"),
+            new ResourceLocation("minecraft", "cobblestone"),
+            new ResourceLocation("minecraft", "stone"),
+            new ResourceLocation("minecraft", "oak_log"),
+            new ResourceLocation("minecraft", "iron_ingot"),
+            new ResourceLocation("minecraft", "gold_ingot"),
+            new ResourceLocation("minecraft", "redstone"),
+            new ResourceLocation("minecraft", "lapis_lazuli"),
+            new ResourceLocation("minecraft", "coal"),
+            new ResourceLocation("minecraft", "quartz"),
+            new ResourceLocation("minecraft", "amethyst_shard"),
+            new ResourceLocation("minecraft", "paper"),
+            new ResourceLocation("minecraft", "glass"),
+            new ResourceLocation("minecraft", "sand"),
+            new ResourceLocation("minecraft", "gravel"),
+            new ResourceLocation("minecraft", "netherrack")
     );
 
     private static final List<ContainerDefinition> CONTAINER_DEFINITIONS = List.of(
-            new ContainerDefinition("Vanilla Chest", ResourceLocation.fromNamespaceAndPath("minecraft", "chest")),
-            new ContainerDefinition("Vanilla Barrel", ResourceLocation.fromNamespaceAndPath("minecraft", "barrel")),
-            new ContainerDefinition("Vanilla Shulker Box", ResourceLocation.fromNamespaceAndPath("minecraft", "shulker_box")),
-            new ContainerDefinition("Vanilla Hopper", ResourceLocation.fromNamespaceAndPath("minecraft", "hopper")),
-            new ContainerDefinition("Sophisticated Chest", ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "chest")),
-            new ContainerDefinition("Sophisticated Barrel", ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "barrel")),
-            new ContainerDefinition("Sophisticated Diamond Chest", ResourceLocation.fromNamespaceAndPath("sophisticatedstorage", "diamond_chest")),
-            new ContainerDefinition("Lootr Chest", ResourceLocation.fromNamespaceAndPath("lootr", "lootr_chest")),
-            new ContainerDefinition("Tom's Filing Cabinet", ResourceLocation.fromNamespaceAndPath("toms_storage", "filing_cabinet"))
+            new ContainerDefinition("Vanilla Chest", new ResourceLocation("minecraft", "chest")),
+            new ContainerDefinition("Vanilla Barrel", new ResourceLocation("minecraft", "barrel")),
+            new ContainerDefinition("Vanilla Shulker Box", new ResourceLocation("minecraft", "shulker_box")),
+            new ContainerDefinition("Vanilla Hopper", new ResourceLocation("minecraft", "hopper")),
+            new ContainerDefinition("Sophisticated Chest", new ResourceLocation("sophisticatedstorage", "chest")),
+            new ContainerDefinition("Sophisticated Barrel", new ResourceLocation("sophisticatedstorage", "barrel")),
+            new ContainerDefinition("Sophisticated Diamond Chest", new ResourceLocation("sophisticatedstorage", "diamond_chest")),
+            new ContainerDefinition("Lootr Chest", new ResourceLocation("lootr", "lootr_chest")),
+            new ContainerDefinition("Tom's Filing Cabinet", new ResourceLocation("toms_storage", "filing_cabinet"))
     );
 
     private StressTestCommand() {
@@ -114,9 +114,9 @@ public final class StressTestCommand {
         CommandSourceStack source = context.getSource();
         ServerPlayer player = source.getPlayerOrException();
         ServerLevel level = player.serverLevel();
-        Block terminalBlock = getBlock(ResourceLocation.fromNamespaceAndPath("toms_storage", "storage_terminal"));
-        Block cableBlock = getBlock(ResourceLocation.fromNamespaceAndPath("toms_storage", "inventory_cable"));
-        Block connectorBlock = getBlock(ResourceLocation.fromNamespaceAndPath("toms_storage", "inventory_connector"));
+        Block terminalBlock = getBlock(new ResourceLocation("toms_storage", "storage_terminal"));
+        Block cableBlock = getBlock(new ResourceLocation("toms_storage", "inventory_cable"));
+        Block connectorBlock = getBlock(new ResourceLocation("toms_storage", "inventory_connector"));
         if (terminalBlock == null || cableBlock == null || connectorBlock == null) {
             source.sendFailure(Component.translatable("message.storage_consolidator.stress.no_terminal"));
             return 0;
@@ -205,13 +205,9 @@ public final class StressTestCommand {
     private static int fillContainer(ServerLevel level, BlockPos position, int slotsPerContainer, int containerIndex) {
         BlockState state = level.getBlockState(position);
         BlockEntity blockEntity = level.getBlockEntity(position);
-        IItemHandler handler = level.getCapability(
-                Capabilities.ItemHandler.BLOCK,
-                position,
-                state,
-                blockEntity,
-                null
-        );
+        IItemHandler handler = blockEntity == null
+                ? null
+                : blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, null).orElse(null);
         if (handler == null) {
             return 0;
         }
@@ -221,7 +217,7 @@ public final class StressTestCommand {
         for (int slot = 0; slot < slots; slot++) {
             Item item = BuiltInRegistries.ITEM.get(TEST_ITEMS.get((slot + containerIndex * 3) % TEST_ITEMS.size()));
             int requested = 8 + ((slot * 13 + containerIndex * 7) % 49);
-            int limit = Math.min(handler.getSlotLimit(slot), item.getDefaultMaxStackSize());
+            int limit = Math.min(handler.getSlotLimit(slot), new ItemStack(item).getMaxStackSize());
             int amount = Math.min(requested, limit);
             if (amount <= 0) {
                 continue;
