@@ -1,13 +1,14 @@
 package org.hp.storage_consolidator.mixin.client;
 
-import com.tom.storagemod.gui.AbstractStorageTerminalScreen;
 import com.tom.storagemod.gui.GuiButton;
+import com.tom.storagemod.gui.StorageTerminalScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.hp.storage_consolidator.Storage_consolidator;
 import org.hp.storage_consolidator.network.ConsolidateRequestPayload;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -17,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** 在 Tom's Storage 1.20.1 终端左侧增加一键整理按钮。 */
 @OnlyIn(Dist.CLIENT)
-@Mixin(value = AbstractStorageTerminalScreen.class, remap = false)
+@Mixin(value = StorageTerminalScreen.class, remap = false)
 public abstract class TomStorageTerminalScreenMixin extends Screen {
     /** Tom's Storage 原有的排序按钮，用于对齐新增按钮。 */
     @Shadow
@@ -31,6 +32,25 @@ public abstract class TomStorageTerminalScreenMixin extends Screen {
     /** 在原终端按钮创建完成后追加整理按钮。 */
     @Inject(method = "init", at = @At("TAIL"))
     private void storageConsolidator$addConsolidateButton(CallbackInfo callbackInfo) {
+        if (buttonSortingType == null) {
+            Storage_consolidator.LOGGER.debug(
+                    "Skipped consolidate button because Tom's Storage sorting button is unavailable: screen={}",
+                    getClass().getName()
+            );
+            return;
+        }
+        int buttonX = buttonSortingType.getX() - 40;
+        int buttonY = buttonSortingType.getY();
+        Storage_consolidator.LOGGER.debug(
+                "Adding consolidate button: screen={}, sortingButton=({},{}), consolidateButton=({},{}), size={}x{}",
+                getClass().getName(),
+                buttonSortingType.getX(),
+                buttonSortingType.getY(),
+                buttonX,
+                buttonY,
+                36,
+                32
+        );
         // 客户端只发送请求，库存读写始终留在服务端。
         addRenderableWidget(Button.builder(
                 Component.translatable("button.storage_consolidator.consolidate"),
@@ -40,6 +60,6 @@ public abstract class TomStorageTerminalScreenMixin extends Screen {
                         ConsolidateRequestPayload.sendToServer();
                     }
                 }
-        ).bounds(buttonSortingType.getX() - 24, buttonSortingType.getY(), 20, 20).build());
+        ).bounds(buttonX, buttonY, 36, 32).build());
     }
 }
